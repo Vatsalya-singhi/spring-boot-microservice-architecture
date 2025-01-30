@@ -1,0 +1,42 @@
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      registerHealthIndicator: true
+      slidingWindowSize: 10
+      minimumNumberOfCalls: 5
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      waitDurationInOpenState: 5s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+  instances:
+    userServiceCircuitBreaker:
+      base-config: default
+    departmentServiceCircuitBreaker:
+      base-config: default
+spring:
+  application:
+    name: API-GATEWAY
+  cloud:
+    gateway:
+      routes:
+        - id: USER-SERVICE
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/v1/users/**
+          filter:
+            - name: CIRCUIT-BREAKER
+              args:
+                name: userServiceCircuitBreaker
+                fallbackUri: forward:/fallback/users
+        - id: DEPARTMENT-SERVICE
+          uri: lb://DEPARTMENT-SERVICE
+          predicates:
+            - Path=/api/v1/departments/**
+          filter:
+            - name: CIRCUIT-BREAKER
+              args:
+                name: departmentServiceCircuitBreaker
+                fallbackUri: forward:/fallback/departments
+server:
+  port: 9191
